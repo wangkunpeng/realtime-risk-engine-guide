@@ -572,12 +572,13 @@
         <a href="#intro" class="active">01 系统边界</a>
         <a href="#architecture">02 参考架构</a>
         <a href="#sync-chain">03 同步决策链</a>
-        <a href="#config-chain">04 配置生效链</a>
-        <a href="#async-chain">05 异步副作用链</a>
-        <a href="#mechanisms">06 关键机制</a>
-        <a href="#failure-drills">07 故障推演</a>
-        <a href="#interview">08 面试表达</a>
-        <a href="#self-check">09 自测题</a>
+        <a href="#feature-dag">04 特征依赖 DAG</a>
+        <a href="#config-chain">05 配置生效链</a>
+        <a href="#async-chain">06 异步副作用链</a>
+        <a href="#mechanisms">07 关键机制</a>
+        <a href="#failure-drills">08 故障推演</a>
+        <a href="#interview">09 面试表达</a>
+        <a href="#self-check">10 自测题</a>
       </nav>
 
       <p class="sidebar-note">本页不描述任何特定公司或项目。所有名称、伪代码和架构图均为独立创作的通用教学材料。</p>
@@ -765,8 +766,71 @@
           </div>
         </section>
 
+        <section class="content-section" id="feature-dag" aria-labelledby="feature-dag-title">
+          <span class="section-number">04 / Feature dependency lifecycle</span>
+          <h2 id="feature-dag-title">特征依赖 DAG：计划预计算，请求复用</h2>
+          <p class="section-intro">依赖计划通常在配置加载或版本刷新时预计算；请求只创建本次执行所需的局部状态，然后按不可变计划调度特征。把“图的结构”与“图的一次执行”分开，是理解性能和并发安全的关键。</p>
+
+          <div class="steps">
+            <article class="step" data-search-item><div><h3>声明直接依赖</h3><p>每类特征通过元数据声明前置条件：计算特征引用表达式变量，聚合特征引用分组键和过滤条件，远程特征引用请求参数。此时得到的是边集合，而不是某个请求的执行结果。</p></div></article>
+            <article class="step" data-search-item><div><h3>确定场景根集合</h3><p>从当前场景会使用的策略、规则树和绑定输出出发，收集直接需要的特征。不同场景可以共享全局定义，但只编译自己能触达的子图。</p></div></article>
+            <article class="step" data-search-item><div><h3>求传递闭包</h3><p>沿依赖边向前递归，得到根特征的全部前置特征。构建期同时检查引用缺失、自依赖和环，避免把不可执行的图切换到在线流量。</p></div></article>
+            <article class="step" data-search-item><div><h3>编译执行计划</h3><p>拓扑遍历可以生成线性后序表，也可以生成多个 stage：同一 stage 内的节点已满足前置条件，可按资源类型并发或批量执行。</p></div></article>
+            <article class="step" data-search-item><div><h3>发布版本化快照</h3><p>以场景、租户和版本为键缓存完整计划，通过原子替换发布。请求开始后固定一个快照，避免执行中途跨越两个依赖版本。</p></div></article>
+            <article class="step" data-search-item><div><h3>执行请求局部状态</h3><p>请求复用节点顺序和 stage，只新建结果表、未完成任务、等待信号、剩余预算和追踪信息；这些状态不能跨请求共享。</p></div></article>
+          </div>
+
+          <pre aria-label="特征依赖计划原创伪代码"><code>function compilePlan(version, roots, metadata): ExecutionPlan {
+  const edges = extractDependencies(metadata)
+  const graph = transitiveClosure(roots, edges)
+  rejectMissingReferencesAndCycles(graph)
+  return freeze({ version, stages: topologicalStages(graph) })
+}
+
+async function collect(context, planCache): FeatureSnapshot {
+  const plan = planCache.get(context.scene, context.tenant)
+  const state = RequestState.from(context.input, context.deadline)
+
+  for (const stage of plan.stages) {
+    await runReadyNodes(stage, state)
+  }
+  return state.freezeFeatures()
+}</code></pre>
+
+          <div class="budget-table-wrap" data-search-item>
+            <table>
+              <caption>构建期与请求期的职责边界</caption>
+              <thead><tr><th scope="col">阶段</th><th scope="col">主要工作</th><th scope="col">可共享</th><th scope="col">主要风险</th></tr></thead>
+              <tbody>
+                <tr><td>配置加载 / 刷新</td><td>解析依赖、闭包、环检测、拓扑分层</td><td>版本化执行计划</td><td>错误计划被发布、构建过慢</td></tr>
+                <tr><td>正常请求</td><td>选择计划、执行节点、等待异步结果</td><td>只读节点定义与顺序</td><td>并发放大、预算耗尽</td></tr>
+                <tr><td>条件按需模式</td><td>先算条件，再选择预构建片段</td><td>节点或分支计划片段</td><td>合并去重、分支等价性</td></tr>
+                <tr><td>缓存缺失兜底</td><td>同步构建或加载计划</td><td>构建完成后共享</td><td>首请求抖动、并发重复构建</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="tradeoff" data-search-item>
+            <div><h3>为什么不在每个请求建图</h3><ul><li>依赖结构随配置版本变化，不随请求载荷变化。</li><li>闭包、环检测和拓扑分层会重复消耗 CPU 与内存。</li><li>预计算让错误尽量在发布阶段暴露，也让线上计划可观测、可回放。</li></ul></div>
+            <div><h3>请求仍会动态做什么</h3><ul><li>按场景与版本选择计划。</li><li>根据低成本条件选择已编译的分支片段。</li><li>创建结果、任务、等待和超时状态，并执行真正的特征计算。</li></ul></div>
+          </div>
+
+          <div class="concept-grid">
+            <article class="card" data-search-item><span class="label">Cold path</span><h3>缓存缺失不等于常态</h3><p>有些实现允许首个请求同步构建并回填计划。更稳妥的做法是发布期预热，并对相同键使用 single-flight，避免并发冷请求重复建图。</p></article>
+            <article class="card" data-search-item><span class="label">Lazy path</span><h3>选片段不等于重建拓扑</h3><p>条件分支可以先执行少量特征，再合并命中节点的预构建 stage。需要验证跨片段去重、阶段对齐以及按需结果与全量结果等价。</p></article>
+            <article class="card" data-search-item><span class="label">Small graph</span><h3>区分临时依赖执行器</h3><p>某些局部流程会按请求把少量依赖转成 latch 或 future。它重建的是一次调用的等待状态，不应与主特征图的版本化执行计划混为一谈。</p></article>
+            <article class="card" data-search-item><span class="label">Complexity</span><h3>构建成本看实现细节</h3><p>一次 DFS 或拓扑排序通常是 O(V+E)；如果每生成一层都重新扫描全图，深链可能接近多轮 O(V+E)。因此构建应脱离请求关键路径。</p></article>
+          </div>
+
+          <article class="card measure" data-search-item>
+            <span class="label">Interview answer</span>
+            <h3>三十秒回答</h3>
+            <p>“依赖结构不是每请求计算。配置加载或刷新时先从特征元数据提取边，从场景根特征求传递闭包，完成环检测和拓扑分层，再把执行计划按版本缓存。请求只选择计划并创建本次执行的结果、Future 和等待状态。例外是缓存 miss 可能触发同步兜底，以及条件懒加载会选择并合并预构建片段，但它们都不等于每次重新解析整张图。”</p>
+          </article>
+        </section>
+
         <section class="content-section" id="config-chain" aria-labelledby="config-title">
-          <span class="section-number">04 / Configuration lifecycle</span>
+          <span class="section-number">05 / Configuration lifecycle</span>
           <h2 id="config-title">配置不是文件：它是一条发布链</h2>
           <p class="section-intro">策略系统的难点通常不在“如何读取配置”，而在错误配置如何被拦截、多个实例如何收敛、版本如何观测，以及出问题时能否快速回滚。</p>
 
@@ -786,7 +850,7 @@
         </section>
 
         <section class="content-section" id="async-chain" aria-labelledby="async-title">
-          <span class="section-number">05 / Asynchronous side effects</span>
+          <span class="section-number">06 / Asynchronous side effects</span>
           <h2 id="async-title">异步链路的核心不是“用了消息队列”</h2>
           <p class="section-intro">消息系统只提供传输能力。真正决定可靠性的，是生产确认、消费提交、幂等键、重试边界、死信处理以及下游是否支持重复调用。</p>
 
@@ -817,7 +881,7 @@
         </section>
 
         <section class="content-section" id="mechanisms" aria-labelledby="mechanisms-title">
-          <span class="section-number">06 / Design mechanics</span>
+          <span class="section-number">07 / Design mechanics</span>
           <h2 id="mechanisms-title">六个值得讲透的关键机制</h2>
           <p class="section-intro">面试回答不要停在定义。每个机制都应说明它解决什么问题、参考实现、付出的代价，以及继续追问时如何展开。</p>
 
@@ -850,7 +914,7 @@
         </section>
 
         <section class="content-section" id="failure-drills" aria-labelledby="failures-title">
-          <span class="section-number">07 / Failure drills</span>
+          <span class="section-number">08 / Failure drills</span>
           <h2 id="failures-title">用故障推演检验架构是否成立</h2>
           <p class="section-intro">高级面试更关注异常路径。回答顺序建议固定为：现象与影响范围、快速止血、证据定位、根因修复、长期防复发。</p>
 
@@ -865,7 +929,7 @@
         </section>
 
         <section class="content-section" id="interview" aria-labelledby="interview-title">
-          <span class="section-number">08 / Interview narrative</span>
+          <span class="section-number">09 / Interview narrative</span>
           <h2 id="interview-title">把系统知识组织成可信回答</h2>
           <p class="section-intro">不要从组件清单开始。先给业务约束，再展开关键链路和设计选择；个人贡献必须来自真实经历，不能用“系统具备的能力”替代。</p>
 
@@ -894,7 +958,7 @@
         </section>
 
         <section class="content-section" id="self-check" aria-labelledby="self-check-title">
-          <span class="section-number">09 / Self check</span>
+          <span class="section-number">10 / Self check</span>
           <h2 id="self-check-title">十个问题检查理解深度</h2>
           <p class="section-intro">先独立回答，再展开提示。好的答案应该包含边界条件和失败路径，而不仅是术语定义。</p>
 

@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="面向高级后端工程师的实时风险决策引擎通用架构学习指南。">
+  <title>实时风险决策引擎：架构与面试学习指南</title>
+  <style>
+    :root {
+      --page: #ffffff;
+      --surface: #fafafa;
+      --surface-strong: #f4f4f5;
+      --ink: #09090b;
+      --body: #3f3f46;
+      --muted: #64646d;
+      --border: #e4e4e7;
+      --divider: #f0f0f2;
+      --accent: #1d4ed8;
+      --accent-soft: #eff6ff;
+      --success: #15803d;
+      --success-soft: #f0fdf4;
+      --danger: #b91c1c;
+      --danger-soft: #fef2f2;
+      --code-bg: #18181b;
+      --code-fg: #f4f4f5;
+      --sidebar-width: 272px;
+      --reading-width: 720px;
+      --content-width: 960px;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--body);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.8;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:hover { text-decoration-thickness: 2px; }
+    code, pre, .mono { font-family: var(--font-mono); }
+    code {
+      border-radius: var(--radius-sm);
+      background: var(--surface-strong);
+      color: #9f1239;
+      font-size: .84em;
+      padding: 2px 5px;
+    }
+    pre {
+      margin: 24px 0;
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      background: var(--code-bg);
+      color: var(--code-fg);
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 20px 22px;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+    [hidden] { display: none !important; }
+    :focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: var(--radius-sm);
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 1000;
+      left: 16px;
+      top: 12px;
+      transform: translateY(-160%);
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      background: var(--page);
+      color: var(--ink);
+      padding: 10px 14px;
+      transition: transform 120ms linear;
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .reading-progress {
+      position: fixed;
+      z-index: 500;
+      inset: 0 0 auto 0;
+      height: 3px;
+      background: transparent;
+    }
+    .reading-progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .mobile-bar {
+      display: none;
+      position: sticky;
+      z-index: 400;
+      top: 0;
+      min-height: 58px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.96);
+      padding: 0 14px;
+    }
+    .mobile-title { color: var(--ink); font-size: 14px; font-weight: 650; }
+    .menu-button {
+      width: 56px;
+      height: 44px;
+      flex: 0 0 56px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--page);
+      color: var(--ink);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .layout { min-height: 100vh; }
+    .sidebar {
+      position: fixed;
+      z-index: 350;
+      inset: 0 auto 0 0;
+      width: var(--sidebar-width);
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      padding: 30px 20px 24px;
+    }
+    .brand-mark {
+      display: inline-flex;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .sidebar h2 {
+      margin: 12px 0 2px;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    .sidebar-meta { margin: 0 0 22px; color: var(--muted); font-size: 12px; }
+    .search-label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .search-row { position: relative; }
+    .search-input {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--page);
+      color: var(--ink);
+      padding: 9px 38px 9px 11px;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .clear-search {
+      position: absolute;
+      right: 3px;
+      top: 3px;
+      width: 38px;
+      height: 38px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .search-status { min-height: 24px; margin: 6px 0 12px; color: var(--muted); font-size: 12px; }
+    .toc-title {
+      margin: 18px 0 6px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .toc { display: grid; gap: 2px; }
+    .toc a {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      border-radius: 6px;
+      color: var(--body);
+      font-size: 13px;
+      line-height: 1.35;
+      padding: 8px 10px;
+      text-decoration: none;
+    }
+    .toc a:hover { background: var(--surface-strong); color: var(--ink); }
+    .toc a.active { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+    .sidebar-note {
+      margin-top: 22px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      padding-top: 16px;
+    }
+
+    .drawer-backdrop {
+      display: none;
+      position: fixed;
+      z-index: 340;
+      inset: 58px 0 0;
+      border: 0;
+      background: rgba(9,9,11,.32);
+    }
+
+    main { margin-left: var(--sidebar-width); }
+    .article-shell { max-width: var(--content-width); margin: 0 auto; padding: 68px 48px 96px; }
+    .measure { max-width: var(--reading-width); }
+    .eyebrow {
+      margin: 0 0 16px;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { color: var(--ink); }
+    h1 {
+      max-width: 800px;
+      margin: 0;
+      font-size: 40px;
+      line-height: 1.18;
+      letter-spacing: -.035em;
+    }
+    .lead {
+      max-width: var(--reading-width);
+      margin: 24px 0 0;
+      color: var(--body);
+      font-size: 18px;
+      line-height: 1.8;
+    }
+    .disclaimer {
+      max-width: var(--reading-width);
+      margin: 26px 0 0;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-soft);
+      color: #1e3a8a;
+      padding: 13px 16px;
+    }
+    .hero-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 38px;
+      border: 1px solid var(--border);
+      background: var(--border);
+    }
+    .hero-meta div { background: var(--page); padding: 17px 18px; }
+    .hero-meta dt {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .hero-meta dd { margin: 4px 0 0; color: var(--ink); font-size: 15px; font-weight: 650; }
+
+    .content-section { margin-top: 88px; scroll-margin-top: 24px; }
+    .section-number {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    .content-section > h2 {
+      margin: 0 0 22px;
+      border-bottom: 1px solid var(--border);
+      font-size: 26px;
+      line-height: 1.35;
+      letter-spacing: -.02em;
+      padding-bottom: 12px;
+    }
+    .section-intro { max-width: var(--reading-width); margin: 0 0 28px; }
+    h3 { margin: 34px 0 12px; font-size: 19px; line-height: 1.5; }
+    p { margin: 0 0 18px; }
+    ul, ol { margin: 0 0 20px; padding-left: 24px; }
+    li { margin-bottom: 8px; }
+
+    .concept-grid, .mechanism-grid, .failure-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--page);
+      padding: 20px 22px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 17px; }
+    .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+    .label {
+      display: inline-block;
+      margin-bottom: 9px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .term-list { margin: 0; }
+    .term-list div { display: grid; grid-template-columns: 124px 1fr; gap: 16px; border-top: 1px solid var(--divider); padding: 13px 0; }
+    .term-list div:first-child { border-top: 0; }
+    .term-list dt { color: var(--ink); font-weight: 650; }
+    .term-list dd { margin: 0; }
+
+    .architecture-frame {
+      overflow-x: auto;
+      margin: 26px 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      padding: 20px;
+    }
+    .architecture-frame svg { display: block; min-width: 760px; width: 100%; height: auto; }
+    .architecture-caption { color: var(--muted); font-size: 13px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0 0; color: var(--muted); font-size: 13px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend i { width: 12px; height: 12px; border: 1px solid var(--border); background: var(--page); }
+    .legend .critical { border-color: var(--accent); background: var(--accent-soft); }
+    .legend .async { border-color: var(--success); background: var(--success-soft); }
+
+    .steps { counter-reset: guide-step; display: grid; gap: 0; margin-top: 26px; }
+    .step {
+      counter-increment: guide-step;
+      position: relative;
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      gap: 16px;
+      padding: 0 0 28px;
+    }
+    .step::before {
+      content: counter(guide-step, decimal-leading-zero);
+      display: flex;
+      width: 42px;
+      height: 42px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--page);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .step::after {
+      content: "";
+      position: absolute;
+      left: 20px;
+      top: 46px;
+      bottom: 4px;
+      width: 1px;
+      background: var(--border);
+    }
+    .step:last-child::after { display: none; }
+    .step h3 { margin: 3px 0 6px; font-size: 17px; }
+    .step p { max-width: var(--reading-width); margin: 0; }
+
+    .budget-table-wrap { overflow-x: auto; margin: 24px 0; }
+    table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px; }
+    caption { color: var(--muted); padding: 0 0 10px; text-align: left; }
+    th {
+      border-bottom: 2px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      padding: 9px 12px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    td { border-bottom: 1px solid var(--divider); padding: 11px 12px; vertical-align: top; }
+
+    .tradeoff {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin: 24px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .tradeoff > div { padding: 18px 20px; }
+    .tradeoff > div + div { border-left: 1px solid var(--border); }
+    .tradeoff h3 { margin: 0 0 8px; font-size: 16px; }
+    .tradeoff ul { margin-bottom: 0; }
+
+    .mechanism-card { display: flex; flex-direction: column; }
+    .reasoning { margin: 12px 0 0; }
+    .reasoning div { border-top: 1px solid var(--divider); padding: 10px 0; }
+    .reasoning dt { color: var(--ink); font-weight: 650; }
+    .reasoning dd { margin: 3px 0 0; }
+
+    .failure-card { border-left: 3px solid var(--danger); }
+    .failure-card .symptom { color: var(--danger); font-weight: 650; }
+    .failure-card ol { margin-bottom: 0; }
+
+    .answer-frame {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1px;
+      margin: 26px 0;
+      border: 1px solid var(--border);
+      background: var(--border);
+    }
+    .answer-frame div { background: var(--page); padding: 16px; }
+    .answer-frame strong { display: block; color: var(--accent); font-family: var(--font-mono); font-size: 12px; }
+    .answer-frame span { display: block; margin-top: 6px; color: var(--ink); font-size: 14px; font-weight: 650; }
+
+    .question-list { display: grid; gap: 10px; margin-top: 24px; }
+    .question-card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--page); }
+    .question-card summary {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 650;
+      padding: 13px 16px;
+    }
+    .question-card summary::after { content: "+"; color: var(--accent); font-family: var(--font-mono); }
+    .question-card[open] summary::after { content: "−"; }
+    .question-card .answer { border-top: 1px solid var(--divider); padding: 16px; }
+    .question-card .answer p:last-child, .question-card .answer ul:last-child { margin-bottom: 0; }
+
+    .search-empty {
+      margin: 30px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      padding: 24px;
+    }
+    .search-empty h2 { margin: 0 0 6px; color: var(--ink); font-size: 19px; }
+    .search-empty p { margin: 0 0 14px; }
+    .secondary-button {
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--page);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 8px 14px;
+    }
+    .secondary-button:hover { border-color: var(--muted); background: var(--surface); }
+
+    footer {
+      max-width: var(--reading-width);
+      margin-top: 88px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      padding-top: 20px;
+    }
+
+    @media (hover: hover) {
+      .card:hover { border-color: #a1a1aa; }
+      .question-card:hover { border-color: #a1a1aa; }
+    }
+
+    @media (max-width: 899px) {
+      .mobile-bar { display: flex; }
+      .sidebar {
+        top: 58px;
+        width: min(86vw, 320px);
+        transform: translateX(-105%);
+        transition: transform 140ms ease-out;
+      }
+      body.nav-open { overflow: hidden; }
+      body.nav-open .sidebar { transform: translateX(0); }
+      body.nav-open .drawer-backdrop { display: block; }
+      main { margin-left: 0; }
+      .article-shell { padding: 46px 24px 76px; }
+      h1 { font-size: 34px; }
+      .answer-frame { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .answer-frame div:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 639px) {
+      .article-shell { padding: 38px 18px 64px; }
+      h1 { font-size: 28px; }
+      .lead { font-size: 17px; }
+      .content-section { margin-top: 68px; }
+      .content-section > h2 { font-size: 23px; }
+      .hero-meta, .concept-grid, .mechanism-grid, .failure-grid { grid-template-columns: 1fr; }
+      .hero-meta { gap: 1px; }
+      .term-list div { grid-template-columns: 1fr; gap: 2px; }
+      .tradeoff { grid-template-columns: 1fr; }
+      .tradeoff > div + div { border-left: 0; border-top: 1px solid var(--border); }
+      .answer-frame { grid-template-columns: 1fr; }
+      .answer-frame div:last-child { grid-column: auto; }
+      .architecture-frame { margin-inline: -6px; padding: 14px; }
+      .step { grid-template-columns: 44px minmax(0, 1fr); gap: 12px; }
+      .step::before { width: 36px; height: 36px; }
+      .step::after { left: 17px; top: 40px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+
+    @media print {
+      .reading-progress, .mobile-bar, .sidebar, .drawer-backdrop, .skip-link { display: none !important; }
+      main { margin: 0; }
+      .article-shell { max-width: none; padding: 0; }
+      .content-section { break-inside: avoid; margin-top: 46px; }
+      .card, .question-card, .architecture-frame { break-inside: avoid; }
+      .question-card .answer { display: block; }
+      body { color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到正文</a>
+  <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+
+  <header class="mobile-bar">
+    <span class="mobile-title">实时风险决策引擎</span>
+    <button class="menu-button" id="menu-toggle" type="button" aria-expanded="false" aria-controls="site-sidebar" aria-label="打开章节目录">目录</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="site-sidebar" aria-label="学习指南目录">
+      <span class="brand-mark" aria-hidden="true">RE</span>
+      <h2>架构学习指南</h2>
+      <p class="sidebar-meta">通用参考模型 · 高级后端面试</p>
+
+      <label class="search-label" for="site-search">全文筛选</label>
+      <div class="search-row">
+        <input class="search-input" id="site-search" type="search" placeholder="例如：fail-open、幂等" autocomplete="off">
+        <button class="clear-search" id="clear-search" type="button" aria-label="清除搜索" hidden>×</button>
+      </div>
+      <p class="search-status" id="search-status" aria-live="polite">输入关键词筛选学习卡片</p>
+
+      <p class="toc-title">Contents</p>
+      <nav class="toc" aria-label="章节导航">
+        <a href="#intro" class="active">01 系统边界</a>
+        <a href="#architecture">02 参考架构</a>
+        <a href="#sync-chain">03 同步决策链</a>
+        <a href="#config-chain">04 配置生效链</a>
+        <a href="#async-chain">05 异步副作用链</a>
+        <a href="#mechanisms">06 关键机制</a>
+        <a href="#failure-drills">07 故障推演</a>
+        <a href="#interview">08 面试表达</a>
+        <a href="#self-check">09 自测题</a>
+      </nav>
+
+      <p class="sidebar-note">本页不描述任何特定公司或项目。所有名称、伪代码和架构图均为独立创作的通用教学材料。</p>
+    </aside>
+    <button class="drawer-backdrop" id="drawer-backdrop" type="button" aria-label="关闭章节目录"></button>
+
+    <main id="main-content" tabindex="-1">
+      <article class="article-shell">
+        <header>
+          <p class="eyebrow">Backend Architecture Field Guide</p>
+          <h1>实时风险决策引擎：从运行机制到面试表达</h1>
+          <p class="lead">这是一份面向高级后端工程师的通用学习地图。目标不是背诵组件名，而是理解一次决策如何在有限延迟中完成、配置如何安全生效，以及异步动作如何面对重复与失败。</p>
+          <p class="disclaimer"><strong>内容边界：</strong>全文是通用参考模型。所有接口名和伪代码均为虚构示例，不对应任何真实公司的系统、源码或部署结构。</p>
+          <dl class="hero-meta">
+            <div><dt>Recommended start</dt><dd>同步决策主链</dd></div>
+            <div><dt>Study focus</dt><dd>机制、取舍、故障</dd></div>
+            <div><dt>Delivery</dt><dd>单文件 · 可离线</dd></div>
+          </dl>
+        </header>
+
+        <section class="content-section" id="intro" aria-labelledby="intro-title">
+          <span class="section-number">01 / System boundary</span>
+          <h2 id="intro-title">先定义问题，再谈架构</h2>
+          <p class="section-intro">实时风险决策系统接收一条业务事件，在严格时延预算内补齐必要特征、执行策略，并返回可解释的决策；需要改变外部状态的动作通常转入异步链路。</p>
+
+          <div class="concept-grid">
+            <article class="card" data-search-item>
+              <span class="label">Input</span>
+              <h3>规范化事件</h3>
+              <p>事件类型、主体标识、场景上下文、请求元数据和可选业务载荷。入口层首先完成校验、鉴权、限流和统一建模。</p>
+            </article>
+            <article class="card" data-search-item>
+              <span class="label">Output</span>
+              <h3>决策与解释</h3>
+              <p>允许、拒绝、复核或降级结果，以及原因码、策略版本、命中特征摘要和可选的后续动作意图。</p>
+            </article>
+            <article class="card" data-search-item>
+              <span class="label">Constraint</span>
+              <h3>有限延迟预算</h3>
+              <p>总时延不是一个统一超时值，而是入口、特征、策略和响应序列化之间的预算分配与抢占。</p>
+            </article>
+            <article class="card" data-search-item>
+              <span class="label">Boundary</span>
+              <h3>同步判断，异步执行</h3>
+              <p>同步链负责给调用方稳定答复；封禁、通知、审核等外部副作用通过消息链路解耦，分别治理可靠性。</p>
+            </article>
+          </div>
+
+          <h3>建立统一语言</h3>
+          <dl class="term-list measure">
+            <div><dt>事件</dt><dd>一次需要判断的业务事实，例如访问、提交、交易或内容发布。</dd></div>
+            <div><dt>特征</dt><dd>用于判断的可计算事实；可来自请求、缓存、远程服务或实时聚合。</dd></div>
+            <div><dt>策略</dt><dd>把特征映射为决策的版本化逻辑，可以是规则树、评分模型或组合编排。</dd></div>
+            <div><dt>副作用</dt><dd>会改变外部状态的动作，应与实时响应的可用性目标分开设计。</dd></div>
+          </dl>
+        </section>
+
+        <section class="content-section" id="architecture" aria-labelledby="architecture-title">
+          <span class="section-number">02 / Reference architecture</span>
+          <h2 id="architecture-title">一张图建立系统地图</h2>
+          <p class="section-intro">下图表达职责边界而非固定产品选型。面试时先讲清楚控制流、数据流与副作用流，再说明不同实现可以替换哪些部分。</p>
+
+          <figure class="architecture-frame" data-search-item>
+            <svg viewBox="0 0 980 520" role="img" aria-labelledby="architecture-svg-title architecture-svg-desc" xmlns="http://www.w3.org/2000/svg">
+              <title id="architecture-svg-title">实时风险决策引擎通用参考架构</title>
+              <desc id="architecture-svg-desc">请求依次经过客户端治理、接入层、决策编排、特征层和策略求值后返回结果；配置中心向运行时缓存发布版本，命中动作通过消息队列进入副作用执行器。</desc>
+              <defs>
+                <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="#71717a"/></marker>
+                <marker id="arrow-blue" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="#1d4ed8"/></marker>
+                <marker id="arrow-green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="#15803d"/></marker>
+              </defs>
+              <rect x="22" y="26" width="936" height="466" rx="8" fill="#ffffff" stroke="#e4e4e7"/>
+              <text x="48" y="60" fill="#64646d" font-size="12" font-family="ui-monospace, monospace" letter-spacing="1.2">SYNC DECISION PATH</text>
+
+              <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+                <rect x="48" y="92" width="130" height="70" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="113" y="121" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">调用方</text>
+                <text x="113" y="143" text-anchor="middle" fill="#64646d" font-size="12">业务服务 / SDK</text>
+
+                <rect x="220" y="92" width="130" height="70" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="285" y="121" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">接入层</text>
+                <text x="285" y="143" text-anchor="middle" fill="#64646d" font-size="12">校验 / 保护 / 路由</text>
+
+                <rect x="392" y="82" width="160" height="90" rx="6" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+                <text x="472" y="118" text-anchor="middle" fill="#1e3a8a" font-size="15" font-weight="700">决策编排器</text>
+                <text x="472" y="141" text-anchor="middle" fill="#1d4ed8" font-size="12">预算 / 选链 / 上下文</text>
+
+                <rect x="594" y="92" width="130" height="70" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="659" y="121" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">特征层</text>
+                <text x="659" y="143" text-anchor="middle" fill="#64646d" font-size="12">DAG / 缓存 / 远程</text>
+
+                <rect x="766" y="92" width="144" height="70" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="838" y="121" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">策略求值</text>
+                <text x="838" y="143" text-anchor="middle" fill="#64646d" font-size="12">规则 / 评分 / 解释</text>
+
+                <line x1="178" y1="127" x2="214" y2="127" stroke="#71717a" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <line x1="350" y1="127" x2="386" y2="127" stroke="#1d4ed8" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+                <line x1="552" y1="127" x2="588" y2="127" stroke="#1d4ed8" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+                <line x1="724" y1="127" x2="760" y2="127" stroke="#1d4ed8" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+                <path d="M838 162V198H285V168" fill="none" stroke="#71717a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+                <text x="560" y="192" text-anchor="middle" fill="#64646d" font-size="11">decision response</text>
+
+                <text x="48" y="248" fill="#64646d" font-size="12" font-family="ui-monospace, monospace" letter-spacing="1.2">CONTROL PLANE</text>
+                <rect x="48" y="270" width="170" height="72" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="133" y="300" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">策略管理</text>
+                <text x="133" y="323" text-anchor="middle" fill="#64646d" font-size="12">校验 / 审核 / 版本</text>
+                <rect x="270" y="270" width="170" height="72" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="355" y="300" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">配置发布</text>
+                <text x="355" y="323" text-anchor="middle" fill="#64646d" font-size="12">灰度 / 回滚 / 通知</text>
+                <rect x="492" y="270" width="170" height="72" rx="6" fill="#ffffff" stroke="#a1a1aa"/>
+                <text x="577" y="300" text-anchor="middle" fill="#09090b" font-size="15" font-weight="600">版本化缓存</text>
+                <text x="577" y="323" text-anchor="middle" fill="#64646d" font-size="12">预热 / 原子切换</text>
+                <line x1="218" y1="306" x2="264" y2="306" stroke="#71717a" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <line x1="440" y1="306" x2="486" y2="306" stroke="#71717a" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <path d="M577 270V220H659V168" fill="none" stroke="#71717a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+
+                <text x="48" y="390" fill="#64646d" font-size="12" font-family="ui-monospace, monospace" letter-spacing="1.2">ASYNC SIDE EFFECTS</text>
+                <rect x="392" y="410" width="160" height="58" rx="6" fill="#f0fdf4" stroke="#15803d"/>
+                <text x="472" y="445" text-anchor="middle" fill="#166534" font-size="14" font-weight="600">消息队列</text>
+                <rect x="594" y="410" width="130" height="58" rx="6" fill="#ffffff" stroke="#15803d"/>
+                <text x="659" y="445" text-anchor="middle" fill="#166534" font-size="14" font-weight="600">幂等消费</text>
+                <rect x="766" y="410" width="144" height="58" rx="6" fill="#ffffff" stroke="#15803d"/>
+                <text x="838" y="435" text-anchor="middle" fill="#166534" font-size="14" font-weight="600">动作适配器</text>
+                <text x="838" y="455" text-anchor="middle" fill="#64646d" font-size="11">审核 / 通知 / 限制</text>
+                <path d="M838 162V380H472V404" fill="none" stroke="#15803d" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#arrow-green)"/>
+                <line x1="552" y1="439" x2="588" y2="439" stroke="#15803d" stroke-width="1.7" marker-end="url(#arrow-green)"/>
+                <line x1="724" y1="439" x2="760" y2="439" stroke="#15803d" stroke-width="1.7" marker-end="url(#arrow-green)"/>
+              </g>
+            </svg>
+          </figure>
+          <p class="architecture-caption">实线表示主控制流，虚线表示返回、配置注入或异步派生。任何具体系统都应根据业务风险、时延和组织边界调整。</p>
+          <div class="legend" aria-label="架构图图例">
+            <span><i class="critical"></i> 实时关键路径</span>
+            <span><i></i> 支撑与控制面</span>
+            <span><i class="async"></i> 异步副作用</span>
+          </div>
+        </section>
+
+        <section class="content-section" id="sync-chain" aria-labelledby="sync-title">
+          <span class="section-number">03 / Synchronous decision</span>
+          <h2 id="sync-title">第一条应深入的链路：同步决策</h2>
+          <p class="section-intro">这条链路最能检验一个人是否真正理解实时系统：它同时涉及 API 契约、超时传播、特征依赖、策略执行、降级语义和可观测性。</p>
+
+          <div class="steps">
+            <article class="step" data-search-item><div><h3>请求规范化</h3><p>客户端或接入层把不同业务载荷转换成稳定的 <code>RiskRequest</code>，补齐请求标识、调用来源、截止时间和追踪上下文。</p></div></article>
+            <article class="step" data-search-item><div><h3>保护与路由</h3><p>按场景选择逻辑集群或策略集合，先执行本地限流、熔断和参数校验。调用方的截止时间必须向下传播，不能在每层重新开始计时。</p></div></article>
+            <article class="step" data-search-item><div><h3>构建决策上下文</h3><p><code>DecisionContext</code> 持有不可变请求、可变特征快照、预算、策略版本和解释信息，避免参数在节点之间失控扩散。</p></div></article>
+            <article class="step" data-search-item><div><h3>按依赖收集特征</h3><p>将特征依赖构造成 DAG：同层可并发，跨层按依赖等待；先求值低成本条件，再决定是否请求昂贵的远程特征。</p></div></article>
+            <article class="step" data-search-item><div><h3>策略求值</h3><p>策略只读取已冻结的特征视图，产出决策、原因码和动作意图。运行时记录实际策略版本，而不是只记录“当前配置”。</p></div></article>
+            <article class="step" data-search-item><div><h3>响应与异步派生</h3><p>同步响应遵守清晰的降级契约；非必要的日志、样本和副作用事件在响应前最小化，在响应后或异步通道完成。</p></div></article>
+          </div>
+
+          <pre aria-label="同步决策原创伪代码"><code>async function decide(request: RiskRequest): Promise&lt;Decision&gt; {
+  const budget = DeadlineBudget.from(request.deadline)
+  const context = DecisionContext.create(request, activePolicyVersion())
+
+  const route = routeTable.select(context.scene)
+  const features = await featureDag.collect(route.requiredFeatures, budget)
+
+  if (budget.exhausted()) {
+    return degradationPolicy.for(context.scene).fallback("FEATURE_TIMEOUT")
+  }
+
+  const result = policyEvaluator.evaluate(route.policy, features)
+  sideEffectPublisher.publishBestEffort(result.actionIntents)
+  return result.toDecision()
+}</code></pre>
+
+          <div class="budget-table-wrap" data-search-item>
+            <table>
+              <caption>示例：100ms 总预算的分配思路，不代表固定比例</caption>
+              <thead><tr><th scope="col">阶段</th><th scope="col">预算</th><th scope="col">超时后的选择</th><th scope="col">关键指标</th></tr></thead>
+              <tbody>
+                <tr><td>接入与排队</td><td>10ms</td><td>快速拒绝或按场景降级</td><td>队列时间、拒绝率</td></tr>
+                <tr><td>特征采集</td><td>55ms</td><td>取消未完成任务，使用缺省或缓存值</td><td>特征命中率、分位延迟</td></tr>
+                <tr><td>策略求值</td><td>20ms</td><td>跳过非关键分支或使用稳定版本</td><td>节点耗时、命中分布</td></tr>
+                <tr><td>封装与余量</td><td>15ms</td><td>保证响应序列化和网络返回</td><td>总耗时、预算耗尽率</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="tradeoff" data-search-item>
+            <div><h3>为什么选择 fail-open</h3><ul><li>误杀成本高于漏放成本。</li><li>风险能力不是主业务完成的硬前提。</li><li>可以通过原因码、采样和补偿链路追踪降级。</li></ul></div>
+            <div><h3>什么时候必须 fail-closed</h3><ul><li>合规或资金安全要求禁止不确定状态继续。</li><li>缺失特征意味着无法验证强约束。</li><li>业务提供了明确的人工复核或延迟处理路径。</li></ul></div>
+          </div>
+        </section>
+
+        <section class="content-section" id="config-chain" aria-labelledby="config-title">
+          <span class="section-number">04 / Configuration lifecycle</span>
+          <h2 id="config-title">配置不是文件：它是一条发布链</h2>
+          <p class="section-intro">策略系统的难点通常不在“如何读取配置”，而在错误配置如何被拦截、多个实例如何收敛、版本如何观测，以及出问题时能否快速回滚。</p>
+
+          <div class="steps">
+            <article class="step" data-search-item><div><h3>编辑与静态校验</h3><p>校验语法、字段类型、引用关系、循环依赖和高风险动作；不能把所有错误留给运行时发现。</p></div></article>
+            <article class="step" data-search-item><div><h3>生成不可变版本</h3><p>发布生成独立版本和内容摘要，记录作者、审批、差异与发布时间。运行时只消费版本，不消费“正在编辑的草稿”。</p></div></article>
+            <article class="step" data-search-item><div><h3>灰度与预热</h3><p>先让少量实例或影子流量加载新版本，预取必要字典和模型，并验证加载耗时、内存与结果差异。</p></div></article>
+            <article class="step" data-search-item><div><h3>原子切换</h3><p>在进程内构建完整新快照，通过单一引用替换；请求开始时固定版本，避免一次决策跨越两个配置版本。</p></div></article>
+            <article class="step" data-search-item><div><h3>收敛观测</h3><p>每个实例上报当前版本、加载状态和失败原因。控制面关注“目标版本”和“实际版本”的差距，而非只看发布成功。</p></div></article>
+            <article class="step" data-search-item><div><h3>回滚与保底</h3><p>回滚指向上一个已验证版本；新版本为空、解析失败或不完整时保留旧快照，而不是把错误状态替换进运行时。</p></div></article>
+          </div>
+
+          <div class="tradeoff" data-search-item>
+            <div><h3>推送通知</h3><p>传播快，但通知可能丢失或重复。适合用来触发拉取，不宜把完整配置可靠性绑定在一次通知上。</p></div>
+            <div><h3>周期拉取</h3><p>最终能自愈，但存在生效延迟和集中访问压力。常见组合是“通知加速 + 周期校准 + 随机抖动”。</p></div>
+          </div>
+        </section>
+
+        <section class="content-section" id="async-chain" aria-labelledby="async-title">
+          <span class="section-number">05 / Asynchronous side effects</span>
+          <h2 id="async-title">异步链路的核心不是“用了消息队列”</h2>
+          <p class="section-intro">消息系统只提供传输能力。真正决定可靠性的，是生产确认、消费提交、幂等键、重试边界、死信处理以及下游是否支持重复调用。</p>
+
+          <div class="steps">
+            <article class="step" data-search-item><div><h3>生成动作意图</h3><p>策略返回结构化 <code>ActionIntent</code>，包含目标、动作类型、决策版本、幂等键和有效期，不直接在策略节点调用外部系统。</p></div></article>
+            <article class="step" data-search-item><div><h3>可靠投递</h3><p>如果“响应成功但消息不能丢”是强要求，应使用事务消息或 Outbox；如果动作可补偿，则可以选择更低成本的尽力投递。</p></div></article>
+            <article class="step" data-search-item><div><h3>幂等消费</h3><p>消费者先以业务幂等键查询处理状态，成功后记录结果。幂等窗口必须覆盖消息最大重试与积压恢复周期。</p></div></article>
+            <article class="step" data-search-item><div><h3>分级重试</h3><p>瞬时网络失败使用有上限的退避；参数错误和永久权限错误直接进入人工或死信处理，避免无意义重试形成风暴。</p></div></article>
+            <article class="step" data-search-item><div><h3>下游适配</h3><p>动作适配器统一超时、熔断、审计和结果映射，让消费框架不依赖每个下游的协议细节。</p></div></article>
+            <article class="step" data-search-item><div><h3>对账与补偿</h3><p>最终状态不能只靠消费日志证明。通过状态表或定期对账识别“消息成功但下游未生效”等不一致并补偿。</p></div></article>
+          </div>
+
+          <pre aria-label="异步消费原创伪代码"><code>async function consume(intent: ActionIntent): Promise&lt;void&gt; {
+  if (await idempotencyStore.isCompleted(intent.key)) return
+
+  const lease = await idempotencyStore.tryAcquire(intent.key, intent.expiresAt)
+  if (!lease.acquired) return
+
+  try {
+    const result = await actionAdapter.execute(intent)
+    await idempotencyStore.complete(intent.key, result.receipt)
+    await consumer.commit()
+  } catch (error) {
+    if (isPermanent(error)) await deadLetterQueue.send(intent, error.code)
+    else throw error
+  }
+}</code></pre>
+        </section>
+
+        <section class="content-section" id="mechanisms" aria-labelledby="mechanisms-title">
+          <span class="section-number">06 / Design mechanics</span>
+          <h2 id="mechanisms-title">六个值得讲透的关键机制</h2>
+          <p class="section-intro">面试回答不要停在定义。每个机制都应说明它解决什么问题、参考实现、付出的代价，以及继续追问时如何展开。</p>
+
+          <div class="mechanism-grid">
+            <article class="card mechanism-card" data-search-item>
+              <span class="label">Availability</span><h3>分层 fail-open</h3>
+              <dl class="reasoning"><div><dt>问题</dt><dd>依赖抖动可能拖垮主业务。</dd></div><div><dt>方案</dt><dd>按场景、特征和错误类型定义降级，不使用全局统一放行。</dd></div><div><dt>取舍</dt><dd>提高可用性，但扩大漏放风险，必须记录降级原因。</dd></div><div><dt>追问</dt><dd>哪些风险等级允许缺省？谁决定阈值？</dd></div></dl>
+            </article>
+            <article class="card mechanism-card" data-search-item>
+              <span class="label">Execution</span><h3>特征依赖 DAG</h3>
+              <dl class="reasoning"><div><dt>问题</dt><dd>串行太慢，全部并发又浪费资源。</dd></div><div><dt>方案</dt><dd>显式声明依赖，同层并发，条件分支延迟加载。</dd></div><div><dt>取舍</dt><dd>降低尾延迟，但调度、取消和可观测性更复杂。</dd></div><div><dt>追问</dt><dd>如何处理循环依赖和共享特征？</dd></div></dl>
+            </article>
+            <article class="card mechanism-card" data-search-item>
+              <span class="label">Runtime</span><h3>动态选链</h3>
+              <dl class="reasoning"><div><dt>问题</dt><dd>不同场景需要不同成本和风险模型。</dd></div><div><dt>方案</dt><dd>入口按场景选择编排模板和策略版本，节点保持小接口。</dd></div><div><dt>取舍</dt><dd>扩展灵活，但路由组合爆炸，需要配置校验与审计。</dd></div><div><dt>追问</dt><dd>如何证明一次请求实际走了哪条链？</dd></div></dl>
+            </article>
+            <article class="card mechanism-card" data-search-item>
+              <span class="label">Consistency</span><h3>版本化缓存</h3>
+              <dl class="reasoning"><div><dt>问题</dt><dd>配置读取不能阻塞实时请求。</dd></div><div><dt>方案</dt><dd>后台构建不可变快照，前台通过原子引用读取。</dd></div><div><dt>取舍</dt><dd>读路径稳定，但跨实例只保证最终收敛。</dd></div><div><dt>追问</dt><dd>如何检测实例长期停留在旧版本？</dd></div></dl>
+            </article>
+            <article class="card mechanism-card" data-search-item>
+              <span class="label">Client</span><h3>SDK 治理</h3>
+              <dl class="reasoning"><div><dt>问题</dt><dd>调用方容易各自实现超时、重试和降级。</dd></div><div><dt>方案</dt><dd>SDK 统一请求契约、截止时间、路由、保护和错误分类。</dd></div><div><dt>取舍</dt><dd>降低接入成本，但升级节奏和语言版本成为治理问题。</dd></div><div><dt>追问</dt><dd>服务端与旧 SDK 如何保持兼容？</dd></div></dl>
+            </article>
+            <article class="card mechanism-card" data-search-item>
+              <span class="label">Reliability</span><h3>幂等而非幻想 exactly-once</h3>
+              <dl class="reasoning"><div><dt>问题</dt><dd>消息重复、超时重试和消费重平衡不可避免。</dd></div><div><dt>方案</dt><dd>稳定业务键、状态机、下游幂等和对账共同防重。</dd></div><div><dt>取舍</dt><dd>需要额外存储与清理，并处理进行中状态超时。</dd></div><div><dt>追问</dt><dd>幂等记录与外部动作如何保持原子性？</dd></div></dl>
+            </article>
+          </div>
+        </section>
+
+        <section class="content-section" id="failure-drills" aria-labelledby="failures-title">
+          <span class="section-number">07 / Failure drills</span>
+          <h2 id="failures-title">用故障推演检验架构是否成立</h2>
+          <p class="section-intro">高级面试更关注异常路径。回答顺序建议固定为：现象与影响范围、快速止血、证据定位、根因修复、长期防复发。</p>
+
+          <div class="failure-grid">
+            <article class="card failure-card" data-search-item><h3>特征服务尾延迟上升</h3><p class="symptom">现象：总 P99 上升，超时降级率同步增加。</p><ol><li>按特征拆分耗时与在途数。</li><li>取消预算外任务并启用缓存值。</li><li>检查并发放大、连接池与下游限流。</li><li>把非关键特征移出关键路径或延迟加载。</li></ol></article>
+            <article class="card failure-card" data-search-item><h3>错误策略快速扩散</h3><p class="symptom">现象：命中率或拒绝率在发布后突变。</p><ol><li>冻结后续发布并切回稳定版本。</li><li>按策略版本对比结果分布。</li><li>定位校验、灰度或审批缺口。</li><li>增加离线回放、阈值护栏和自动回滚。</li></ol></article>
+            <article class="card failure-card" data-search-item><h3>实例配置版本不一致</h3><p class="symptom">现象：同类请求在不同实例得到不同结果。</p><ol><li>查看实例版本分布和加载错误。</li><li>摘除无法收敛的实例。</li><li>重新触发拉取并验证内容摘要。</li><li>建立目标版本收敛率告警。</li></ol></article>
+            <article class="card failure-card" data-search-item><h3>消息积压与重复消费</h3><p class="symptom">现象：动作延迟，扩容后重复量增加。</p><ol><li>确认生产速率、消费速率与分区倾斜。</li><li>保护下游后再逐步扩容。</li><li>检查幂等键覆盖范围和状态超时。</li><li>按业务优先级分流积压并执行对账。</li></ol></article>
+            <article class="card failure-card" data-search-item><h3>下游动作系统雪崩</h3><p class="symptom">现象：消费线程被慢调用占满，重试持续放大。</p><ol><li>熔断并暂停非关键动作。</li><li>限制重试并隔离失败类型。</li><li>降低单消费者并发，保护下游恢复。</li><li>增加每动作独立线程池与速率预算。</li></ol></article>
+            <article class="card failure-card" data-search-item><h3>降级被误当成正常放行</h3><p class="symptom">现象：总体成功率正常，但风险效果持续下降。</p><ol><li>区分业务决策与异常降级结果。</li><li>对降级原因码单独计数和告警。</li><li>采样保存缺失特征与依赖错误。</li><li>把效果指标与系统可用性联合观察。</li></ol></article>
+          </div>
+        </section>
+
+        <section class="content-section" id="interview" aria-labelledby="interview-title">
+          <span class="section-number">08 / Interview narrative</span>
+          <h2 id="interview-title">把系统知识组织成可信回答</h2>
+          <p class="section-intro">不要从组件清单开始。先给业务约束，再展开关键链路和设计选择；个人贡献必须来自真实经历，不能用“系统具备的能力”替代。</p>
+
+          <div class="answer-frame" aria-label="五段式架构回答框架">
+            <div><strong>01</strong><span>业务问题</span></div>
+            <div><strong>02</strong><span>规模与约束</span></div>
+            <div><strong>03</strong><span>核心链路</span></div>
+            <div><strong>04</strong><span>关键取舍</span></div>
+            <div><strong>05</strong><span>故障与结果</span></div>
+          </div>
+
+          <article class="card measure" data-search-item>
+            <span class="label">Example structure</span>
+            <h3>两分钟回答骨架</h3>
+            <p>“这个系统解决的是在严格时延预算内，对业务事件完成实时风险判断。同步链路把请求规范化后构建决策上下文，按依赖 DAG 收集必要特征，再使用固定版本的策略生成结果；会改变外部状态的动作通过消息链路异步执行。架构上的主要取舍是可用性与风险效果、配置生效速度与一致性、消息吞吐与副作用幂等。出现特征超时或错误配置时，我们分别通过预算降级、版本回滚和收敛观测控制影响。至于我个人负责的部分，我会只讲自己实际设计、实现或处置过的内容。”</p>
+          </article>
+
+          <h3>回答时要主动守住的边界</h3>
+          <ul class="measure">
+            <li>“使用消息队列”不能推出端到端 exactly-once。</li>
+            <li>“有缓存”不能推出跨实例强一致。</li>
+            <li>“支持灰度”不能证明实际发布流程执行了灰度。</li>
+            <li>“系统模块存在”不能替代你个人的真实工作范围。</li>
+            <li>生产流量、延迟和收益数字只使用你能解释口径与来源的数据。</li>
+          </ul>
+        </section>
+
+        <section class="content-section" id="self-check" aria-labelledby="self-check-title">
+          <span class="section-number">09 / Self check</span>
+          <h2 id="self-check-title">十个问题检查理解深度</h2>
+          <p class="section-intro">先独立回答，再展开提示。好的答案应该包含边界条件和失败路径，而不仅是术语定义。</p>
+
+          <div class="question-list">
+            <details class="question-card" data-search-item><summary>为什么总超时不能简单平均分给每个特征？</summary><div class="answer"><p>特征有依赖、命中概率和业务价值差异。应按关键程度与成本分配预算，并让剩余预算随执行动态收缩；并行任务还需要可取消，避免请求返回后继续消耗资源。</p></div></details>
+            <details class="question-card" data-search-item><summary>fail-open 与“吞掉异常”有什么区别？</summary><div class="answer"><p>fail-open 是显式业务策略：只对允许的场景和错误类型返回降级结果，并携带原因码、指标与追踪信息。吞异常没有契约，也无法评估风险敞口。</p></div></details>
+            <details class="question-card" data-search-item><summary>特征 DAG 如何避免并发放大？</summary><div class="answer"><p>使用条件剪枝、请求内去重、跨请求缓存、全局并发预算和按下游隔离的线程池；同层可并发不代表所有节点同时启动。</p></div></details>
+            <details class="question-card" data-search-item><summary>为什么请求开始时要固定策略版本？</summary><div class="answer"><p>否则一次决策可能读取到两个版本的规则或字典，结果不可重现。固定版本还能让日志、回放和问题定位形成稳定证据链。</p></div></details>
+            <details class="question-card" data-search-item><summary>如何证明配置发布真正完成？</summary><div class="answer"><p>不能只看控制面“发布成功”。要观察目标版本、实例实际版本、加载结果、内容摘要和收敛比例，并对长时间未收敛实例告警或摘除。</p></div></details>
+            <details class="question-card" data-search-item><summary>消息消费者已经去重，为什么下游仍要幂等？</summary><div class="answer"><p>消费者可能在外部动作成功后、提交消息前崩溃；去重记录也可能过期或写失败。端到端可靠性需要每一条可重复边界都有防线。</p></div></details>
+            <details class="question-card" data-search-item><summary>什么时候需要 Outbox？</summary><div class="answer"><p>当业务状态变更和消息发布必须具有一致结果，且无法接受“状态已提交但事件丢失”时使用。代价是额外存储、转发器和积压治理。</p></div></details>
+            <details class="question-card" data-search-item><summary>如何区分系统成功率与风险效果？</summary><div class="answer"><p>系统成功率关注请求、依赖和延迟；风险效果关注命中、误判、漏判和后验结果。大量 fail-open 可能让技术成功率很好看，却让风险效果恶化。</p></div></details>
+            <details class="question-card" data-search-item><summary>策略错误时，为什么回滚通常比热修更可靠？</summary><div class="answer"><p>回滚指向已验证的不可变版本，操作路径短且结果可预测；在线热修会引入新的未验证差异。修复应在止血后重新走校验与灰度。</p></div></details>
+            <details class="question-card" data-search-item><summary>面试中如何区分系统事实与个人贡献？</summary><div class="answer"><p>先用“系统采用……”描述公共事实，再用“我负责……”限定自己的设计、编码、评审或故障处置范围；没有亲自完成的部分不使用第一人称功劳表达。</p></div></details>
+          </div>
+        </section>
+
+        <section class="search-empty" id="search-empty" hidden aria-live="polite">
+          <h2>没有匹配的学习卡片</h2>
+          <p>尝试更短的关键词，例如“缓存”“超时”或“幂等”。</p>
+          <button class="secondary-button" id="empty-clear-search" type="button">清除搜索</button>
+        </section>
+
+        <footer>
+          <p>本指南是独立创作的通用技术学习材料。它不包含真实项目源码、内部标识、生产配置、业务数据或特定公司的实现结论。</p>
+        </footer>
+      </article>
+    </main>
+  </div>
+
+  <noscript><style>.clear-search{display:none}.sidebar{position:absolute}.reading-progress{display:none}@media(max-width:899px){.sidebar{display:none}}</style></noscript>
+  <script>
+    (() => {
+      const body = document.body;
+      const menuToggle = document.getElementById('menu-toggle');
+      const backdrop = document.getElementById('drawer-backdrop');
+      const search = document.getElementById('site-search');
+      const clearSearch = document.getElementById('clear-search');
+      const emptyClearSearch = document.getElementById('empty-clear-search');
+      const searchStatus = document.getElementById('search-status');
+      const searchEmpty = document.getElementById('search-empty');
+      const progressBar = document.getElementById('reading-progress-bar');
+      const searchItems = [...document.querySelectorAll('[data-search-item]')];
+      const navLinks = [...document.querySelectorAll('.toc a')];
+      const sections = [...document.querySelectorAll('.content-section[id]')];
+
+      const setNavOpen = (open) => {
+        body.classList.toggle('nav-open', open);
+        menuToggle.setAttribute('aria-expanded', String(open));
+        menuToggle.setAttribute('aria-label', open ? '关闭章节目录' : '打开章节目录');
+      };
+
+      menuToggle.addEventListener('click', () => setNavOpen(!body.classList.contains('nav-open')));
+      backdrop.addEventListener('click', () => setNavOpen(false));
+      navLinks.forEach((link) => link.addEventListener('click', () => setNavOpen(false)));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') setNavOpen(false);
+      });
+
+      const normalize = (value) => value.trim().toLocaleLowerCase('zh-CN');
+      const applySearch = () => {
+        const query = normalize(search.value);
+        let visible = 0;
+        searchItems.forEach((item) => {
+          const matched = !query || normalize(item.textContent || '').includes(query);
+          item.hidden = !matched;
+          if (matched) visible += 1;
+        });
+        clearSearch.hidden = !query;
+        searchEmpty.hidden = !query || visible > 0;
+        searchStatus.textContent = query ? `找到 ${visible} 个匹配卡片` : '输入关键词筛选学习卡片';
+      };
+      const resetSearch = () => {
+        search.value = '';
+        applySearch();
+        search.focus();
+      };
+      search.addEventListener('input', applySearch);
+      clearSearch.addEventListener('click', resetSearch);
+      emptyClearSearch.addEventListener('click', resetSearch);
+
+      const updateProgress = () => {
+        const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        const ratio = scrollable > 0 ? Math.min(1, window.scrollY / scrollable) : 0;
+        progressBar.style.width = `${Math.round(ratio * 100)}%`;
+      };
+      updateProgress();
+      window.addEventListener('scroll', updateProgress, { passive: true });
+      window.addEventListener('resize', updateProgress);
+
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          const visibleEntry = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (!visibleEntry) return;
+          navLinks.forEach((link) => {
+            const active = link.getAttribute('href') === `#${visibleEntry.target.id}`;
+            link.classList.toggle('active', active);
+            if (active) link.setAttribute('aria-current', 'location');
+            else link.removeAttribute('aria-current');
+          });
+        }, { rootMargin: '-15% 0px -70% 0px', threshold: [0, .2, .5] });
+        sections.forEach((section) => observer.observe(section));
+      }
+    })();
+  </script>
+</body>
+</html>
